@@ -175,6 +175,17 @@ body.light .filters button.none-btn.active {
   border: 1px solid rgba(255,255,255,0.02);
 }
 .card:hover { transform: translateY(-6px); box-shadow: 0 12px 36px rgba(0, 0, 0, 0.6); }
+
+.card {
+  position: relative;
+}
+
+.card.new {
+  transform: scale(1.03);
+  box-shadow: 0 0 20px rgba(255, 174, 0, 0.4);
+  transition: all 0.3s ease;
+}
+
 .card { opacity: 0; transform: scale(0.95); animation: fadeIn 0.3s ease forwards; animation-delay: var(--delay, 0s); }
 @keyframes fadeIn {
   from { opacity: 0; transform: scale(0.95); }
@@ -190,6 +201,52 @@ body.light .filters button.none-btn.active {
 .card-body { padding: 12px; text-align: left; }
 .card-body h3 { margin: 0 0 6px; font-size: 16px; color: var(--text); font-weight: 700; }
 .card-body p { margin: 0; color: var(--muted); font-size: 13px; }
+
+
+/* Selo de novidade no card (corrigido e visível) */
+
+.card.new::before {
+  content: "🔥 NOVO!";
+  position: absolute;
+  top: 10px;
+  right: 10px;
+  background: linear-gradient(90deg, #ff007a, #ffae00);
+  color: #fff;
+  font-weight: 800;
+  font-size: 14px;
+  padding: 5px 10px;
+  border-radius: 10px;
+  box-shadow: 0 0 16px rgba(255, 150, 0, 0.8);
+  text-shadow: 0 0 8px rgba(0,0,0,0.8);
+  animation: pulseBadge 1.2s infinite alternate;
+  z-index: 5;
+}
+
+@keyframes pulseBadge {
+  from { transform: scale(1); opacity: 0.9; }
+  to { transform: scale(1.15); opacity: 1; }
+}
+
+.card.new::before {
+  content: "🔥 NOVO!";
+  position: absolute;
+  top: 10px;
+  right: 10px;
+  background: linear-gradient(90deg, #ff007a, #ffae00);
+  color: #fff;
+  font-weight: 700;
+  font-size: 12px;
+  padding: 4px 8px;
+  border-radius: 8px;
+  box-shadow: 0 0 12px rgba(255, 100, 0, 0.7);
+  animation: pulseBadge 1.5s infinite alternate;
+}
+
+@keyframes pulseBadge {
+  from { transform: scale(1); opacity: 0.85; }
+  to { transform: scale(1.1); opacity: 1; }
+}
+
 
 /* Modal */
 .modal-backdrop {
@@ -305,6 +362,38 @@ body.light .filters button.none-btn.active {
   from { box-shadow: 0 0 8px #00ff88aa; }
   to { box-shadow: 0 0 25px #00ff88; }
 }
+
+
+/* Destaque aprimorado para o vídeo mais recente */
+.media-card.new {
+  position: relative;
+  transform: scale(1.05);
+  z-index: 2;
+  animation: float 3s ease-in-out infinite;
+}
+
+.media-card.new::before {
+  content: "";
+  position: absolute;
+  inset: -6px;
+  border-radius: 12px;
+  background: linear-gradient(135deg, #00ff88, #00ccff, #ffffff33);
+  animation: pulseBorder 2.5s infinite alternate;
+  filter: blur(10px);
+  opacity: 0.7;
+  z-index: -1;
+}
+
+@keyframes pulseBorder {
+  from { opacity: 0.4; transform: scale(1); }
+  to { opacity: 0.9; transform: scale(1.05); }
+}
+
+@keyframes float {
+  0%, 100% { transform: scale(1.05) translateY(0); }
+  50% { transform: scale(1.07) translateY(-4px); }
+}
+
 
 /* Força que o modal centralize conteúdo sem quebrar layout */
 .modal-body { padding: 16px; display: block; }
@@ -447,9 +536,19 @@ const goalBoundResources = [
 
 const data = [
   { id: "memeDefense", type: "none", title: "Meme Defense — Sneaks Oficiais", thumb: "https://tr.rbxcdn.com/180DAY-8c0c817a358715708c2860a14f8290a1/768/432/Image/Webp/noFilter", desc: "Nenhum conteúdo disponível no momento." },
-  { id: "animeVanguards", type: "image", title: "Anime Vanguards — Sneaks Oficiais", thumb: "https://tr.rbxcdn.com/180DAY-7e12df7f63f9ce7a6d10d51004b0e673/768/432/Image/Webp/noFilter", desc: "Nova imagem exclusiva dos sneaks!" },
-  { id: "goalbound", type: "video", title: "GoalBound — Sneaks Oficiais", thumb: "https://tr.rbxcdn.com/180DAY-5ff411f158104aab50bc1c25493028be/768/432/Image/Webp/noFilter", desc: "Sneaks e vazamentos exclusivos direto do campo!" }
+  { id: "animeVanguards", type: "image", isNew: true, isNew: true, title: "Anime Vanguards — Sneaks Oficiais", thumb: "https://tr.rbxcdn.com/180DAY-7e12df7f63f9ce7a6d10d51004b0e673/768/432/Image/Webp/noFilter", desc: "Nova imagem exclusiva dos sneaks!" },
+  { id: "goalbound", type: "video", isNew: true, isNew: true, title: "GoalBound — Sneaks Oficiais", thumb: "https://tr.rbxcdn.com/180DAY-5ff411f158104aab50bc1c25493028be/768/432/Image/Webp/noFilter", desc: "Sneaks e vazamentos exclusivos direto do campo!" }
 ];
+
+// Marca cards com novidades automáticas
+data.forEach(game => {
+  const hasNew =
+    (game.id === "goalbound" && goalBoundResources.some(r => r.isNew)) ||
+    (game.id === "animeVanguards" && animeVanguardsResources.some(r => r.isNew));
+  if (hasNew) game.isNew = true;
+});
+
+
 
 const grid = document.getElementById('grid');
 const notFound = document.getElementById('notFound');
@@ -494,6 +593,9 @@ results.forEach((d, index) => {
     <div class="thumb"><img src="${d.thumb}" alt="${d.title}"></div>
     <div class="card-body"><h3>${d.title}</h3><p>${d.desc}</p></div>`;
   card.addEventListener('click', () => { if (d.id === 'goalbound') openGoalBoundModal(); if (d.id === 'animeVanguards') openAnimeVanguardsModal(); });
+
+  
+if (d.isNew) card.classList.add("new");
 
   // Adiciona atraso escalonado
   card.style.animationDelay = (index * 100) + 'ms';
@@ -551,7 +653,7 @@ function openGoalBoundModal() {
   goalBoundResources.forEach(r => {
     const el = document.createElement('div');
     el.className = 'media-card';
-    if (r.isNew) el.classList.add('new');
+    if (r.isNew && (r.type === "video" || r.type === "youtube")) el.classList.add("new");
 
     if (r.type === 'youtube') {
   const wrapper = document.createElement('div');
@@ -585,7 +687,7 @@ function openAnimeVanguardsModal() {
   animeVanguardsResources.forEach(r => {
     const el = document.createElement('div');
     el.className = 'media-card';
-    if (r.isNew) el.classList.add('new');
+    if (r.isNew && (r.type === "video" || r.type === "youtube")) el.classList.add("new");
 
     if (r.type === 'image') {
       const i = document.createElement('img');
@@ -618,6 +720,31 @@ function openImageViewer(src) {
 document.getElementById('closeImage').onclick = () => {
   document.getElementById('imageViewer').classList.remove('show');
 };
+
+
+// Corrigido: remove selos apenas após 00:00 real do próximo dia
+(function() {
+  const now = new Date();
+  const today = now.toISOString().split('T')[0];
+  const savedDay = localStorage.getItem('lastNewDay');
+
+  // Só remove se for um novo dia real após 00:00
+  if (savedDay && savedDay !== today) {
+    document.querySelectorAll('.card.new').forEach(el => el.classList.remove('new'));
+  }
+  localStorage.setItem('lastNewDay', today);
+})();
+
+(function() {
+  const today = new Date().toISOString().split('T')[0];
+  const savedDay = localStorage.getItem('lastNewDay');
+  if (savedDay !== today) {
+    localStorage.setItem('lastNewDay', today);
+    // Limpa as flags antigas
+    document.querySelectorAll('.card.new').forEach(el => el.classList.remove('new'));
+  }
+})();
+
 </script>
 </body>
 </html>
