@@ -1,264 +1,130 @@
-document.addEventListener('DOMContentLoaded', () => {
+import { createClient } from "https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/+esm";
 
-// === Tema persistente ===
-(function applySavedTheme() {
+// 🔧 Configuração Supabase
+const SUPABASE_URL = "https://dwpytvfngsaxrupvirje.supabase.co";
+const SUPABASE_ANON_KEY =
+  "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImR3cHl0dmZuZ3NheHJ1cHZpcmplIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjA2MTY2MzYsImV4cCI6MjA3NjE5MjYzNn0.49bLB1f29SuTvO5-D1Jzn3fluu2McZuKDL8oT10CeOU";
+
+const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
+// 🧱 Corrigido: usar o ID existente do HTML
+const gamesContainer = document.getElementById("grid");
+const modal = document.getElementById("modalBackdrop");
+const modalTitle = document.getElementById("modalTitle");
+const mediaGrid = document.getElementById("mediaGrid");
+const modalClose = document.getElementById("modalClose");
+
+// 🎥 Função para converter links do YouTube
+function convertYouTube(url) {
   try {
-    const theme = localStorage.getItem('theme');
-    if (theme === 'light') document.body.classList.add('light');
-  } catch (e) {}
-})();
-
-const themeBtn = document.getElementById('themeBtn');
-themeBtn.addEventListener('click', () => {
-  const isLight = document.body.classList.toggle('light');
-  localStorage.setItem('theme', isLight ? 'light' : 'dark');
-  themeBtn.textContent = isLight ? '🌞' : '🌙';
-});
-themeBtn.textContent = document.body.classList.contains('light') ? '🌞' : '🌙';
-
-// === Conteúdos ===
-const goalBoundResources = [
-  { type: 'youtube', src: 'https://www.youtube.com/embed/14FTMQ_fsbc', date: '2025-10-14', isNew: true },
-  { type: 'youtube', src: 'https://www.youtube.com/embed/WnWG-N0cvGM', date: '2024-10-10', isNew: false }
-];
-
-const animeVanguardsResources = [
-  { type: 'image', src: 'https://raw.githubusercontent.com/sempaikk/av-trade/refs/heads/main/image.png', date: '2025-10-14', isNew: true }
-];
-
-// Detecta o mais recente
-const latest = goalBoundResources
-  .filter(r => r.type === 'video' || r.type === 'youtube')
-  .sort((a, b) => new Date(b.date) - new Date(a.date))[0];
-if (latest) {
-  goalBoundResources.forEach(r => {
-    if (r.src === latest.src) r.isNew = true;
-  });
+    if (url.includes("embed/")) return url;
+    let id = "";
+    if (url.includes("watch?v=")) id = url.split("watch?v=")[1].split("&")[0];
+    else if (url.includes("youtu.be/")) id = url.split("youtu.be/")[1].split("?")[0];
+    return `https://www.youtube.com/embed/${id}`;
+  } catch {
+    return url;
+  }
 }
 
-const data = [
-  { id: "memeDefense", type: "none", title: "Meme Defense — Sneaks Oficiais", thumb: "https://tr.rbxcdn.com/180DAY-8c0c817a358715708c2860a14f8290a1/768/432/Image/Webp/noFilter", desc: "Nenhum conteúdo disponível no momento." },
-  { id: "animeVanguards", type: "image", isNew: true, title: "Anime Vanguards — Sneaks Oficiais", thumb: "https://tr.rbxcdn.com/180DAY-7e12df7f63f9ce7a6d10d51004b0e673/768/432/Image/Webp/noFilter", desc: "Nova imagem exclusiva dos sneaks!" },
-  { id: "goalbound", type: "video", isNew: true, title: "GoalBound — Sneaks Oficiais", thumb: "https://tr.rbxcdn.com/180DAY-5ff411f158104aab50bc1c25493028be/768/432/Image/Webp/noFilter", desc: "Sneaks e vazamentos exclusivos direto do campo!" }
-];
+// 🚀 Carregar jogos
+async function loadGames() {
+  gamesContainer.innerHTML = "<p style='text-align:center;'>Carregando jogos...</p>";
 
-// Marca cards com novidades
-data.forEach(game => {
-  const hasNew =
-    (game.id === "goalbound" && goalBoundResources.some(r => r.isNew)) ||
-    (game.id === "animeVanguards" && animeVanguardsResources.some(r => r.isNew));
-  if (hasNew) game.isNew = true;
-});
+  const { data: games, error } = await supabase
+    .from("games")
+    .select("*")
+    .order("title", { ascending: true });
 
-// === Elementos DOM ===
-const grid = document.getElementById('grid');
-const notFound = document.getElementById('notFound');
-const modalBackdrop = document.getElementById('modalBackdrop');
-const mediaGrid = document.getElementById('mediaGrid');
-const modalClose = document.getElementById('modalClose');
-const searchInput = document.getElementById('search');
-const suggestionsBox = document.getElementById('suggestions');
+  if (error) {
+    console.error("Erro ao carregar jogos:", error);
+    gamesContainer.innerHTML = "<p style='text-align:center;'>Erro ao carregar jogos.</p>";
+    return;
+  }
 
-// === Renderização dinâmica ===
-function render(filter = 'all', query = '') {
-  const existingCards = Array.from(grid.children);
-  const q = query.toLowerCase().trim();
+  if (!games || games.length === 0) {
+    gamesContainer.innerHTML = "<p style='text-align:center;'>Nenhum jogo encontrado.</p>";
+    return;
+  }
 
-  const results = data.filter(d => {
-    if (filter === 'all') return true;
-    if (filter === 'video' && (d.type === 'video' || d.type === 'both')) return true;
-    if (filter === 'image' && (d.type === 'image' || d.type === 'both')) return true;
-    if (filter === 'none' && (!d.type || d.type === 'none')) return true;
-    return false;
-  }).filter(d => d.title.toLowerCase().includes(q) || d.desc.toLowerCase().includes(q));
+  for (const game of games) {
+    const { data: resources, error: resError } = await supabase
+      .from("resources")
+      .select("*")
+      .eq("game_id", game.id);
 
-  existingCards.forEach(card => { card.style.animation = 'fadeOut 0.25s forwards'; });
-
-  setTimeout(() => {
-    grid.innerHTML = '';
-    if (results.length === 0) {
-      notFound.style.display = 'block';
-      return;
+    if (resError) {
+      console.error("Erro ao carregar recursos:", resError);
+      continue;
     }
-    notFound.style.display = 'none';
 
-    results.forEach((d, index) => {
-      const card = document.createElement('div');
-      card.className = 'card';
-      card.innerHTML = `
-        <div class="thumb"><img src="${d.thumb}" alt="${d.title}"></div>
-        <div class="card-body"><h3>${d.title}</h3><p>${d.desc}</p></div>`;
-      card.addEventListener('click', () => {
-        if (d.id === 'goalbound') openGoalBoundModal();
-        if (d.id === 'animeVanguards') openAnimeVanguardsModal();
-      });
-      if (d.isNew) card.classList.add("new");
-      card.style.animationDelay = (index * 100) + 'ms';
-      grid.appendChild(card);
-    });
-  }, 200);
+    game.resources = resources || [];
+  }
+
+  renderGames(games);
 }
-render();
 
-// === Filtros e busca ===
-document.querySelectorAll('.filters button').forEach(btn => {
-  btn.addEventListener('click', () => {
-    document.querySelectorAll('.filters button').forEach(b => b.classList.remove('active'));
-    btn.classList.add('active');
-    render(btn.dataset.filter, searchInput.value);
+// 🎨 Renderizar jogos na tela
+function renderGames(games) {
+  gamesContainer.innerHTML = "";
+
+  games.forEach((game) => {
+    const card = document.createElement("div");
+    card.classList.add("card");
+
+    const thumb = game.thumb
+      ? `<div class="thumb"><img src="${game.thumb}" alt="${game.title}"></div>`
+      : `<div class="thumb"><div style='background:#222;width:100%;height:180px;display:flex;align-items:center;justify-content:center;'>Sem imagem</div></div>`;
+
+    card.innerHTML = `
+      ${thumb}
+      <div class="card-body">
+        <h3>${game.title}</h3>
+        <p>${game.desc || ""}</p>
+      </div>
+    `;
+
+    card.addEventListener("click", () => openGameModal(game));
+    gamesContainer.appendChild(card);
   });
-});
+}
 
-document.getElementById('searchBtn').addEventListener('click', () => {
-  render(document.querySelector('.filters button.active').dataset.filter, searchInput.value);
-});
+// 🪟 Abrir modal com recursos
+function openGameModal(game) {
+  modalTitle.textContent = game.title;
+  mediaGrid.innerHTML = "";
 
-searchInput.addEventListener('keyup', e => {
-  const val = e.target.value.toLowerCase().trim();
-
-  if (val) {
-    const matches = data.filter(d => d.title.toLowerCase().includes(val));
-    suggestionsBox.innerHTML = matches.map(m => `<div class="suggestion-item">${m.title}</div>`).join('');
-    suggestionsBox.classList.toggle('show', matches.length > 0);
+  if (!game.resources || game.resources.length === 0) {
+    mediaGrid.innerHTML = "<p style='text-align:center;'>Sem recursos disponíveis para este jogo.</p>";
   } else {
-    suggestionsBox.classList.remove('show');
-  }
-  render(document.querySelector('.filters button.active').dataset.filter, val);
-});
-suggestionsBox.addEventListener('click', e => {
-  if (e.target.classList.contains('suggestion-item')) {
-    searchInput.value = e.target.textContent;
-    suggestionsBox.classList.remove('show');
-    render(document.querySelector('.filters button.active').dataset.filter, searchInput.value);
-  }
-});
+    game.resources.forEach((r) => {
+      const card = document.createElement("div");
+      card.classList.add("media-card");
 
-// === Modais ===
-function openGoalBoundModal() {
-  mediaGrid.innerHTML = '';
-  goalBoundResources.forEach(r => {
-    const el = document.createElement('div');
-    el.className = 'media-card';
-    if (r.isNew && (r.type === "video" || r.type === "youtube")) el.classList.add("new");
-
-    if (r.type === 'youtube') {
-      const wrapper = document.createElement('div');
-      wrapper.className = 'responsive-video';
-      const iframe = document.createElement('iframe');
-      iframe.src = r.src;
-      iframe.frameBorder = '0';
-      iframe.allow = 'accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture';
-      iframe.allowFullscreen = true;
-      wrapper.appendChild(iframe);
-      el.appendChild(wrapper);
-    } else if (r.type === 'image') {
-      const i = document.createElement('img');
-      i.src = r.src;
-      i.onclick = () => openImageViewer(i.src);
-      el.appendChild(i);
-    }
-    mediaGrid.appendChild(el);
-  });
-  modalBackdrop.classList.add('show');
-}
-
-function openAnimeVanguardsModal() {
-  mediaGrid.innerHTML = '';
-  animeVanguardsResources.forEach(r => {
-    const el = document.createElement('div');
-    el.className = 'media-card';
-    if (r.isNew && (r.type === "video" || r.type === "youtube")) el.classList.add("new");
-
-    if (r.type === 'image') {
-      const i = document.createElement('img');
-      i.src = r.src;
-      i.onclick = () => openImageViewer(i.src);
-      el.appendChild(i);
-    }
-    mediaGrid.appendChild(el);
-  });
-  document.querySelector('.modal-header h2').textContent = "Anime Vanguards — Sneaks Oficiais";
-  modalBackdrop.classList.add('show');
-}
-
-modalClose.onclick = () => closeModal();
-function closeModal() {
-  mediaGrid.querySelectorAll('iframe').forEach(iframe => (iframe.src = ''));
-  modalBackdrop.classList.remove('show');
-  document.querySelector('.modal-header h2').textContent = "GoalBound — Sneaks Oficiais";
-}
-
-// === Viewer ===
-function openImageViewer(src) {
-  document.getElementById('viewerImg').src = src;
-  document.getElementById('imageViewer').classList.add('show');
-}
-document.getElementById('closeImage').onclick = () => {
-  document.getElementById('imageViewer').classList.remove('show');
-};
-
-// === Gestos e toques mobile ===
-let startY = 0;
-
-// Fechar modal ao tocar fora
-modalBackdrop.addEventListener('click', e => {
-  if (e.target === modalBackdrop) closeModal();
-});
-
-// Swipe para baixo no modal
-modalBackdrop.addEventListener('touchstart', e => { startY = e.touches[0].clientY; });
-modalBackdrop.addEventListener('touchmove', e => {
-  const deltaY = e.touches[0].clientY - startY;
-  if (deltaY > 100) closeModal();
-});
-
-// Fechar viewer tocando fora ou deslizando
-const imageViewer = document.getElementById('imageViewer');
-imageViewer.addEventListener('click', e => {
-  if (e.target === imageViewer) imageViewer.classList.remove('show');
-});
-let imgStartY = 0;
-imageViewer.addEventListener('touchstart', e => { imgStartY = e.touches[0].clientY; });
-imageViewer.addEventListener('touchmove', e => {
-  const deltaY = e.touches[0].clientY - imgStartY;
-  if (deltaY > 80) imageViewer.classList.remove('show');
-});
-
-// === Auto-reset de selos diários ===
-(function() {
-  const now = new Date();
-  const today = now.toISOString().split('T')[0];
-  const savedDay = localStorage.getItem('lastNewDay');
-  if (savedDay && savedDay !== today) {
-    document.querySelectorAll('.card.new').forEach(el => el.classList.remove('new'));
-  }
-  localStorage.setItem('lastNewDay', today);
-})();
-
-// === Auto detecção de novidades ===
-(function autoDetectNewness() {
-  const now = new Date();
-  const cutoff = new Date(now.getTime() - (24 * 60 * 60 * 1000));
-  const todayStr = now.toISOString().split('T')[0];
-
-  const resourceMap = {
-    goalbound: goalBoundResources,
-    animeVanguards: animeVanguardsResources
-  };
-
-  data.forEach(game => {
-    const resList = resourceMap[game.id] || [];
-    let foundNew = false;
-    resList.forEach(r => {
-      if (!r || !r.date) return;
-      const rDate = new Date(r.date + 'T00:00:00');
-      if (r.date === todayStr || rDate >= cutoff) {
-        r.isNew = true;
-        foundNew = true;
+      if (r.type === "youtube") {
+        const embed = convertYouTube(r.src);
+        card.innerHTML = `
+          <div class="responsive-video">
+            <iframe src="${embed}" frameborder="0" allowfullscreen></iframe>
+          </div>`;
+      } else if (r.type === "image") {
+        card.innerHTML = `<img src="${r.src}" alt="Imagem do recurso">`;
+      } else {
+        card.innerHTML = `<a href="${r.src}" target="_blank">${r.src}</a>`;
       }
-    });
-    if (foundNew) game.isNew = true;
-  });
-})();
 
-}); // DOMContentLoaded end
+      mediaGrid.appendChild(card);
+    });
+  }
+
+  modal.classList.add("show");
+}
+
+// Fechar modal
+modalClose.addEventListener("click", () => modal.classList.remove("show"));
+window.addEventListener("click", (e) => {
+  if (e.target === modal) modal.classList.remove("show");
+});
+
+// Iniciar
+loadGames();
