@@ -14,7 +14,6 @@
 }
 * { box-sizing: border-box; margin: 0; padding: 0; }
 
-/* permite scroll vertical e bloqueia horizontal */
 html, body {
   overflow-x: hidden;
   overflow-y: auto;
@@ -29,7 +28,6 @@ body {
   animation: fadeIn 0.6s ease both;
 }
 
-/* animação global */
 @keyframes fadeIn {
   from { opacity: 0; transform: translateY(10px); }
   to { opacity: 1; transform: translateY(0); }
@@ -156,11 +154,44 @@ body {
   transform: translateY(-6px) scale(1.03);
   box-shadow: 0 10px 25px rgba(255,255,255,0.08);
 }
-.thumb { position: relative; padding-top: 56%; overflow: hidden; }
-.thumb img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; }
-.card-body { padding: 12px; text-align: left; }
-.card-body h3 { margin: 0 0 6px; font-size: 16px; color: var(--text); font-weight: 700; }
-.card-body p { margin: 0; color: var(--muted); font-size: 13px; }
+
+/* imagem do card */
+.thumb {
+  position: relative;
+  padding-top: 56%;
+  overflow: hidden;
+}
+.thumb img {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+
+/* corpo do card */
+.card-body {
+  padding: 10px 10px 10px;
+  text-align: left;
+  display: flex;
+  flex-direction: column;
+  gap: 0; /* elimina o espaço entre o título e a descrição */
+}
+.card-body h3 {
+  margin: 0;
+  font-size: 16px;
+  color: var(--text);
+  font-weight: 700;
+  line-height: 1.1;
+}
+/* ✅ Descrição ajustada: sobe sem mover o título */
+.card-body p {
+  margin: -2px 0 0 0;
+  color: var(--muted);
+  font-size: 13px;
+  line-height: 1.2;
+}
 
 /* vídeo responsivo */
 .responsive-video {
