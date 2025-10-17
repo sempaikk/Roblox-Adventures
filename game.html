@@ -1,0 +1,289 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Carregando jogo...</title>
+  <link rel="stylesheet" href="style.css" />
+  <link rel="stylesheet" href="style_mobile.css" />
+  <style>
+    /* --- Corrige as barras de rolagem duplicadas --- */
+    html, body {
+      overflow-x: hidden;
+      overflow-y: auto;
+      height: 100%;
+    }
+
+    /* --- Estilos exclusivos do game.html --- */
+    .game-header {
+      position: relative;
+      width: 100%;
+      height: 320px;
+      background: #111;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      overflow: hidden;
+      border-bottom: 1px solid rgba(255,255,255,0.08);
+      opacity: 0;
+      animation: fadeIn 0.8s ease forwards;
+    }
+    .game-header img {
+      position: absolute;
+      inset: 0;
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      filter: brightness(0.6);
+      animation: fadeIn 1s ease forwards;
+    }
+    .game-header h1 {
+      position: relative;
+      color: #fff;
+      font-size: 2rem;
+      z-index: 2;
+      text-shadow: 0 3px 8px rgba(0,0,0,0.7);
+      opacity: 0;
+      animation: fadeIn 1s ease forwards 0.3s;
+    }
+
+    .game-content {
+      max-width: 1000px;
+      margin: 40px auto;
+      padding: 0 20px 140px;
+      opacity: 0;
+      animation: fadeIn 0.8s ease forwards 0.5s;
+    }
+
+    .back-btn {
+      background: transparent;
+      color: var(--text);
+      border: 1px solid var(--text);
+      border-radius: 20px;
+      padding: 6px 14px;
+      font-size: 15px;
+      cursor: pointer;
+      margin-bottom: 25px;
+      transition: background 0.3s ease, color 0.3s ease;
+    }
+    .back-btn:hover {
+      background: var(--text);
+      color: var(--bg);
+    }
+
+    .desc-section {
+      margin-bottom: 30px;
+    }
+    .desc-section h2 {
+      font-size: 1.4rem;
+      margin-bottom: 10px;
+      color: var(--text);
+    }
+    .desc-section p {
+      color: var(--muted);
+      line-height: 1.6;
+    }
+
+    .media-section h2 {
+      font-size: 1.4rem;
+      margin-bottom: 15px;
+      color: var(--text);
+    }
+
+    /* --- Footer fixo e animado --- */
+    footer {
+      position: fixed;
+      bottom: -60px;
+      left: 0;
+      width: 100%;
+      text-align: center;
+      color: var(--muted);
+      font-size: 13px;
+      padding: 12px 0;
+      background: var(--bg);
+      border-top: 1px solid rgba(255,255,255,0.05);
+      z-index: 100;
+      opacity: 0;
+      transition: all 0.6s ease;
+    }
+    footer.visible {
+      bottom: 0;
+      opacity: 1;
+    }
+    .light footer {
+      border-top: 1px solid rgba(0,0,0,0.1);
+    }
+
+    /* --- Botão Voltar ao Topo --- */
+    #backToTop {
+      position: fixed;
+      bottom: 80px;
+      right: 30px;
+      width: 45px;
+      height: 45px;
+      background: var(--text);
+      color: var(--bg);
+      border: none;
+      border-radius: 50%;
+      font-size: 18px;
+      cursor: pointer;
+      box-shadow: 0 4px 15px rgba(0,0,0,0.3);
+      opacity: 0;
+      transform: translateY(20px);
+      transition: all 0.3s ease;
+      z-index: 150;
+    }
+    #backToTop.show {
+      opacity: 1;
+      transform: translateY(0);
+    }
+    #backToTop:hover {
+      transform: translateY(-3px);
+      opacity: 0.9;
+    }
+
+    @keyframes fadeIn {
+      from { opacity: 0; transform: translateY(10px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+  </style>
+</head>
+<body>
+  <button id="themeBtn" class="theme-btn" title="Alternar tema">🌓</button>
+
+  <div class="game-header" id="gameHeader">
+    <h1 id="gameTitle">Carregando...</h1>
+  </div>
+
+  <div class="game-content">
+    <button onclick="history.back()" class="back-btn">← Voltar</button>
+
+    <div class="desc-section">
+      <h2>Sobre o jogo</h2>
+      <p id="gameDesc">Carregando descrição...</p>
+    </div>
+
+    <div class="media-section">
+      <h2>Mídia</h2>
+      <div class="media-grid" id="mediaGrid"></div>
+    </div>
+  </div>
+
+  <footer id="footer">© 2025 Roblox Adventures — feito por <strong>eumesmokkkkkkk</strong></footer>
+
+  <button id="backToTop" title="Voltar ao topo">↑</button>
+
+  <script type="module">
+    import { createClient } from "https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/+esm";
+
+    const SUPABASE_URL = "https://dwpytvfngsaxrupvirje.supabase.co";
+    const SUPABASE_ANON_KEY =
+      "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImR3cHl0dmZuZ3NheHJ1cHZpcmplIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjA2MTY2MzYsImV4cCI6MjA3NjE5MjYzNn0.49bLB1f29SuTvO5-D1Jzn3fluu2McZuKDL8oT10CeOU";
+
+    const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
+    const params = new URLSearchParams(window.location.search);
+    const gameId = params.get("id");
+
+    const header = document.getElementById("gameHeader");
+    const titleEl = document.getElementById("gameTitle");
+    const descEl = document.getElementById("gameDesc");
+    const mediaGrid = document.getElementById("mediaGrid");
+
+    if (!gameId) {
+      titleEl.textContent = "Jogo não encontrado.";
+    } else {
+      loadGame(gameId);
+    }
+
+    async function loadGame(id) {
+      const { data: game, error } = await supabase
+        .from("games")
+        .select("*, resources(*)")
+        .eq("id", id)
+        .single();
+
+      if (error || !game) {
+        titleEl.textContent = "Erro ao carregar o jogo.";
+        console.error(error);
+        return;
+      }
+
+      document.title = game.title + " — Roblox Adventures";
+      titleEl.textContent = game.title;
+      descEl.textContent = game.desc || "Sem descrição disponível.";
+
+      if (game.thumb) {
+        const img = document.createElement("img");
+        img.src = game.thumb;
+        img.alt = game.title;
+        header.appendChild(img);
+      }
+
+      if (!game.resources || game.resources.length === 0) {
+        mediaGrid.innerHTML = "<p style='text-align:center;'>Sem recursos disponíveis.</p>";
+      } else {
+        mediaGrid.innerHTML = "";
+        game.resources.forEach(r => {
+          const card = document.createElement("div");
+          card.classList.add("media-card");
+
+          if (r.type === "youtube") {
+            card.innerHTML = `
+              <div class="responsive-video">
+                <iframe src="${r.src}" frameborder="0" allowfullscreen></iframe>
+              </div>`;
+          } else if (r.type === "image") {
+            card.innerHTML = `<img src="${r.src}" alt="Imagem do recurso">`;
+          } else {
+            card.innerHTML = `<a href="${r.src}" target="_blank">${r.src}</a>`;
+          }
+
+          mediaGrid.appendChild(card);
+        });
+      }
+    }
+
+    // 🌙 Tema
+    const themeBtn = document.getElementById("themeBtn");
+    const root = document.documentElement;
+
+    function applyTheme(theme) {
+      if (theme === "light") root.classList.add("light");
+      else root.classList.remove("light");
+    }
+
+    const savedTheme = localStorage.getItem("theme") || "dark";
+    applyTheme(savedTheme);
+
+    themeBtn.addEventListener("click", () => {
+      const current = root.classList.contains("light") ? "light" : "dark";
+      const next = current === "light" ? "dark" : "light";
+      applyTheme(next);
+      localStorage.setItem("theme", next);
+    });
+
+    // 🎯 Mostrar footer e botão ao rolar
+    const footer = document.getElementById("footer");
+    const backToTop = document.getElementById("backToTop");
+
+    window.addEventListener("scroll", () => {
+      const scrollY = window.scrollY;
+      const scrollBottom = scrollY + window.innerHeight;
+      const docHeight = document.documentElement.scrollHeight;
+
+      // Mostra footer quando chega no final
+      if (scrollBottom >= docHeight - 50) footer.classList.add("visible");
+      else footer.classList.remove("visible");
+
+      // Mostra botão de voltar ao topo depois de 400px
+      if (scrollY > 400) backToTop.classList.add("show");
+      else backToTop.classList.remove("show");
+    });
+
+    backToTop.addEventListener("click", () => {
+      window.scrollTo({ top: 0, behavior: "smooth" });
+    });
+  </script>
+</body>
+</html>

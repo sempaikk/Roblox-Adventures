@@ -10,19 +10,42 @@
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
   <meta name="mobile-web-app-capable" content="yes">
+
+  <style>
+    footer {
+      position: fixed;
+      bottom: 0;
+      left: 0;
+      width: 100%;
+      text-align: center;
+      color: var(--muted);
+      font-size: 13px;
+      padding: 10px 0;
+      background: var(--bg);
+      border-top: 1px solid rgba(255,255,255,0.05);
+      z-index: 100;
+      transition: background 0.3s ease, color 0.3s ease;
+    }
+    .light footer {
+      border-top: 1px solid rgba(0,0,0,0.1);
+    }
+  </style>
 </head>
 <body>
+  <!-- Barra superior de busca -->
   <div class="topbar">
     <div class="search">
-      <input id="search" placeholder="Pesquisar sneaks..." autocomplete="off">
+      <input id="search" placeholder="Pesquisar jogos..." autocomplete="off">
       <button id="searchBtn" aria-label="Buscar">🔍</button>
-      <div id="suggestions" class="suggestions"></div>
     </div>
   </div>
 
+  <!-- Botão de tema -->
   <button id="themeBtn" class="theme-btn" title="Alternar tema" aria-label="Alternar tema">🌓</button>
 
+  <!-- Conteúdo principal -->
   <div class="container">
+    <!-- Filtros -->
     <div class="filters">
       <button class="active" data-filter="all">Tudo</button>
       <button data-filter="video">Vídeos</button>
@@ -30,33 +53,27 @@
       <button data-filter="none" class="none-btn">Sem conteúdo</button>
     </div>
 
+    <!-- Grid de jogos -->
     <div class="grid" id="grid"></div>
 
+    <!-- Mensagem de não encontrado -->
     <p id="notFound" style="display:none;text-align:center;color:var(--muted);margin-top:40px;">
       Nenhum resultado encontrado.
     </p>
-
-    <footer>Créditos: eumesmokkkkkkk</footer>
   </div>
 
-  <!-- Modal -->
-  <div id="modalBackdrop" class="modal-backdrop" role="dialog" aria-modal="true" aria-labelledby="modalTitle">
+  <!-- Modal (mantido, mas sem título nem botão) -->
+  <div id="modalBackdrop" class="modal-backdrop" role="dialog" aria-modal="true">
     <div class="modal">
-      <div class="modal-header">
-        <h2 id="modalTitle">GoalBound — Sneaks Oficiais</h2>
-        <button id="modalClose" class="modal-close" aria-label="Fechar modal">✕</button>
-      </div>
+      <div class="modal-header"></div>
       <div class="modal-body">
         <div class="media-grid" id="mediaGrid"></div>
       </div>
     </div>
   </div>
 
-  <!-- Viewer de imagem -->
-  <div id="imageViewer" class="image-viewer" role="dialog" aria-modal="true">
-    <button id="closeImage" aria-label="Fechar imagem">✕</button>
-    <img id="viewerImg" src="" alt="Visualização de imagem">
-  </div>
+  <!-- Footer fixo -->
+  <footer>© 2025 Roblox Adventures — feito por <strong>eumesmokkkkkkk</strong></footer>
 
   <script type="module" src="script.js"></script>
 </body>

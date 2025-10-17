@@ -7,14 +7,21 @@ const SUPABASE_ANON_KEY =
 
 const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
-// 🧱 Corrigido: usar o ID existente do HTML
+// 🧱 Elementos do DOM
 const gamesContainer = document.getElementById("grid");
 const modal = document.getElementById("modalBackdrop");
 const modalTitle = document.getElementById("modalTitle");
 const mediaGrid = document.getElementById("mediaGrid");
 const modalClose = document.getElementById("modalClose");
+const searchInput = document.querySelector(".search input");
+const searchButton = document.querySelector(".search button");
+const filterButtons = document.querySelectorAll(".filters button");
+const themeBtn = document.getElementById("themeBtn");
+const imageViewer = document.getElementById("imageViewer");
+const viewerImg = document.getElementById("viewerImg");
+const closeImageBtn = document.getElementById("closeImage");
 
-// 🎥 Função para converter links do YouTube
+// 🎥 Converter links do YouTube
 function convertYouTube(url) {
   try {
     if (url.includes("embed/")) return url;
@@ -27,14 +34,30 @@ function convertYouTube(url) {
   }
 }
 
-// 🚀 Carregar jogos
-async function loadGames() {
-  gamesContainer.innerHTML = "<p style='text-align:center;'>Carregando jogos...</p>";
+// 🌀 Função de loading spinner
+function showLoading() {
+  gamesContainer.innerHTML = `
+    <div style="display:flex;justify-content:center;align-items:center;height:60vh;">
+      <div class="spinner"></div>
+    </div>
+  `;
+}
+function hideLoading() {
+  const spinner = document.querySelector(".spinner");
+  if (spinner) spinner.parentElement.remove();
+}
 
-  const { data: games, error } = await supabase
-    .from("games")
-    .select("*")
-    .order("title", { ascending: true });
+// 🚀 Carregar jogos + recursos
+async function loadGames(filter = "all", search = "") {
+  showLoading();
+
+  let query = supabase.from("games").select("*, resources(*)").order("title", { ascending: true });
+
+  if (search.trim() !== "") {
+    query = query.ilike("title", `%${search.trim()}%`);
+  }
+
+  const { data: games, error } = await query;
 
   if (error) {
     console.error("Erro ao carregar jogos:", error);
@@ -42,32 +65,26 @@ async function loadGames() {
     return;
   }
 
+  let filteredGames = games;
+  if (filter === "video") {
+    filteredGames = games.filter(g => g.resources?.some(r => r.type === "youtube"));
+  } else if (filter === "image") {
+    filteredGames = games.filter(g => g.resources?.some(r => r.type === "image"));
+  } else if (filter === "none") {
+    filteredGames = games.filter(g => !g.resources || g.resources.length === 0);
+  }
+
+  renderGames(filteredGames);
+}
+
+// 🎨 Renderizar cards
+function renderGames(games) {
   if (!games || games.length === 0) {
     gamesContainer.innerHTML = "<p style='text-align:center;'>Nenhum jogo encontrado.</p>";
     return;
   }
 
-  for (const game of games) {
-    const { data: resources, error: resError } = await supabase
-      .from("resources")
-      .select("*")
-      .eq("game_id", game.id);
-
-    if (resError) {
-      console.error("Erro ao carregar recursos:", resError);
-      continue;
-    }
-
-    game.resources = resources || [];
-  }
-
-  renderGames(games);
-}
-
-// 🎨 Renderizar jogos na tela
-function renderGames(games) {
   gamesContainer.innerHTML = "";
-
   games.forEach((game) => {
     const card = document.createElement("div");
     card.classList.add("card");
@@ -84,47 +101,73 @@ function renderGames(games) {
       </div>
     `;
 
-    card.addEventListener("click", () => openGameModal(game));
+    // 👉 Agora abre a página game.html?id=...
+    card.addEventListener("click", () => {
+      window.location.href = `game.html?id=${encodeURIComponent(game.id)}`;
+    });
+
     gamesContainer.appendChild(card);
   });
 }
 
-// 🪟 Abrir modal com recursos
-function openGameModal(game) {
-  modalTitle.textContent = game.title;
-  mediaGrid.innerHTML = "";
-
-  if (!game.resources || game.resources.length === 0) {
-    mediaGrid.innerHTML = "<p style='text-align:center;'>Sem recursos disponíveis para este jogo.</p>";
-  } else {
-    game.resources.forEach((r) => {
-      const card = document.createElement("div");
-      card.classList.add("media-card");
-
-      if (r.type === "youtube") {
-        const embed = convertYouTube(r.src);
-        card.innerHTML = `
-          <div class="responsive-video">
-            <iframe src="${embed}" frameborder="0" allowfullscreen></iframe>
-          </div>`;
-      } else if (r.type === "image") {
-        card.innerHTML = `<img src="${r.src}" alt="Imagem do recurso">`;
-      } else {
-        card.innerHTML = `<a href="${r.src}" target="_blank">${r.src}</a>`;
-      }
-
-      mediaGrid.appendChild(card);
-    });
-  }
-
-  modal.classList.add("show");
-}
-
-// Fechar modal
-modalClose.addEventListener("click", () => modal.classList.remove("show"));
-window.addEventListener("click", (e) => {
-  if (e.target === modal) modal.classList.remove("show");
+// 🔍 Buscar
+searchButton.addEventListener("click", () => loadGames(getActiveFilter(), searchInput.value));
+searchInput.addEventListener("keyup", (e) => {
+  if (e.key === "Enter") loadGames(getActiveFilter(), searchInput.value);
 });
 
-// Iniciar
+// 🎮 Filtros
+filterButtons.forEach((btn) => {
+  btn.addEventListener("click", () => {
+    filterButtons.forEach((b) => b.classList.remove("active"));
+    btn.classList.add("active");
+    loadGames(btn.dataset.filter, searchInput.value);
+  });
+});
+function getActiveFilter() {
+  const active = document.querySelector(".filters button.active");
+  return active ? active.dataset.filter : "all";
+}
+
+// 🌗 Tema (com salvamento)
+function applyTheme(theme) {
+  const root = document.documentElement;
+  if (theme === "light") root.classList.add("light");
+  else root.classList.remove("light");
+}
+function toggleTheme() {
+  const root = document.documentElement;
+  const current = root.classList.contains("light") ? "light" : "dark";
+  const next = current === "light" ? "dark" : "light";
+  applyTheme(next);
+  localStorage.setItem("theme", next);
+}
+themeBtn.addEventListener("click", toggleTheme);
+
+// Carregar tema salvo
+const savedTheme = localStorage.getItem("theme") || "dark";
+applyTheme(savedTheme);
+
+// 🖼️ Visualizador de imagem (para quando quiser usar novamente)
+function openImageViewer(src) {
+  viewerImg.src = src;
+  imageViewer.style.display = "flex";
+}
+function closeImageViewer() {
+  imageViewer.style.display = "none";
+  viewerImg.src = "";
+}
+
+// Eventos de fechamento
+if (closeImageBtn) closeImageBtn.addEventListener("click", closeImageViewer);
+if (imageViewer) {
+  imageViewer.addEventListener("click", (e) => {
+    if (e.target === imageViewer) closeImageViewer();
+  });
+}
+window.addEventListener("keyup", (e) => {
+  if (e.key === "Escape") closeImageViewer();
+});
+
+// 🚀 Iniciar
 loadGames();
