@@ -7,29 +7,6 @@
   <link rel="stylesheet" href="style.css">
   <link rel="stylesheet" href="style_mobile.css">
   <meta name="theme-color" content="#000000">
-  <meta name="apple-mobile-web-app-capable" content="yes">
-  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-  <meta name="mobile-web-app-capable" content="yes">
-
-  <style>
-    footer {
-      position: fixed;
-      bottom: 0;
-      left: 0;
-      width: 100%;
-      text-align: center;
-      color: var(--muted);
-      font-size: 13px;
-      padding: 10px 0;
-      background: var(--bg);
-      border-top: 1px solid rgba(255,255,255,0.05);
-      z-index: 100;
-      transition: background 0.3s ease, color 0.3s ease;
-    }
-    .light footer {
-      border-top: 1px solid rgba(0,0,0,0.1);
-    }
-  </style>
 </head>
 <body>
   <!-- Barra superior de busca -->
@@ -39,9 +16,6 @@
       <button id="searchBtn" aria-label="Buscar">🔍</button>
     </div>
   </div>
-
-  <!-- Botão de tema -->
-  <button id="themeBtn" class="theme-btn" title="Alternar tema" aria-label="Alternar tema">🌓</button>
 
   <!-- Conteúdo principal -->
   <div class="container">
@@ -62,17 +36,7 @@
     </p>
   </div>
 
-  <!-- Modal (mantido, mas sem título nem botão) -->
-  <div id="modalBackdrop" class="modal-backdrop" role="dialog" aria-modal="true">
-    <div class="modal">
-      <div class="modal-header"></div>
-      <div class="modal-body">
-        <div class="media-grid" id="mediaGrid"></div>
-      </div>
-    </div>
-  </div>
-
-  <!-- Footer fixo -->
+  <!-- Footer -->
   <footer>© 2025 Roblox Adventures — feito por <strong>eumesmokkkkkkk</strong></footer>
 
   <script type="module" src="script.js"></script>

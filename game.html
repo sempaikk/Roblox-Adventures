@@ -34,7 +34,6 @@
     const SUPABASE_URL = "https://dwpytvfngsaxrupvirje.supabase.co";
     const SUPABASE_ANON_KEY =
       "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImR3cHl0dmZuZ3NheHJ1cHZpcmplIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjA2MTY2MzYsImV4cCI6MjA3NjE5MjYzNn0.49bLB1f29SuTvO5-D1Jzn3fluu2McZuKDL8oT10CeOU";
-
     const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
     const params = new URLSearchParams(window.location.search);
@@ -45,11 +44,8 @@
     const descEl = document.getElementById("gameDesc");
     const mediaGrid = document.getElementById("mediaGrid");
 
-    if (!gameId) {
-      titleEl.textContent = "Jogo não encontrado.";
-    } else {
-      loadGame(gameId);
-    }
+    if (!gameId) titleEl.textContent = "Jogo não encontrado.";
+    else loadGame(gameId);
 
     async function loadGame(id) {
       const { data: game, error } = await supabase
@@ -60,7 +56,6 @@
 
       if (error || !game) {
         titleEl.textContent = "Erro ao carregar o jogo.";
-        console.error(error);
         return;
       }
 
@@ -84,13 +79,15 @@
           card.classList.add("media-card");
 
           if (r.type === "youtube") {
-            card.innerHTML = `<iframe src="${r.src}" frameborder="0" allowfullscreen></iframe>`;
+            const embedUrl = r.src.includes("embed/")
+              ? r.src
+              : r.src.replace("watch?v=", "embed/");
+            card.innerHTML = `<iframe src="${embedUrl}" frameborder="0" allowfullscreen></iframe>`;
           } else if (r.type === "image") {
             card.innerHTML = `<img src="${r.src}" alt="Imagem do recurso">`;
           } else {
             card.innerHTML = `<a href="${r.src}" target="_blank">${r.src}</a>`;
           }
-
           mediaGrid.appendChild(card);
         });
       }
