@@ -12,66 +12,95 @@ const searchInput = document.querySelector(".search input");
 const searchButton = document.querySelector(".search button");
 const filterButtons = document.querySelectorAll(".filters button");
 
-// Funções utilitárias
-function showLoading() {
+let allGames = []; // 🔹 Guardamos os jogos carregados
+let searchTimeout;
+
+// Função de carregamento inicial
+async function loadGames(filter = "all") {
   gamesContainer.innerHTML = `
     <div style="display:flex;justify-content:center;align-items:center;height:60vh;">
       <div class="spinner"></div>
     </div>`;
-}
-function hideLoading() {
-  const spinner = document.querySelector(".spinner");
-  if (spinner) spinner.parentElement.remove();
-}
 
-async function loadGames(filter = "all", search = "") {
-  showLoading();
-  let query = supabase.from("games").select("*, resources(*)").order("title", { ascending: true });
-  if (search.trim() !== "") query = query.ilike("title", `%${search.trim()}%`);
-  const { data: games, error } = await query;
+  const { data: games, error } = await supabase
+    .from("games")
+    .select("*, resources(*)")
+    .order("title", { ascending: true });
 
   if (error) {
     gamesContainer.innerHTML = "<p style='text-align:center;'>Erro ao carregar jogos.</p>";
     return;
   }
 
+  allGames = games; // salva para uso na busca em tempo real
+  renderGames(allGames, filter);
+}
+
+// Função que filtra e exibe
+function renderGames(games, filter = "all", search = "") {
   let filtered = games;
+
+  // Filtro por tipo
   if (filter === "video") filtered = games.filter(g => g.resources?.some(r => r.type === "youtube"));
   else if (filter === "image") filtered = games.filter(g => g.resources?.some(r => r.type === "image"));
   else if (filter === "none") filtered = games.filter(g => !g.resources || g.resources.length === 0);
-  renderGames(filtered);
-}
 
-function renderGames(games) {
-  if (!games || games.length === 0) {
+  // Filtro por texto
+  if (search.trim() !== "") {
+    const term = search.trim().toLowerCase();
+    filtered = filtered.filter(g =>
+      g.title.toLowerCase().includes(term) || (g.desc || "").toLowerCase().includes(term)
+    );
+  }
+
+  // Renderização
+  if (!filtered.length) {
     gamesContainer.innerHTML = "<p style='text-align:center;'>Nenhum jogo encontrado.</p>";
     return;
   }
 
   gamesContainer.innerHTML = "";
-  games.forEach((game) => {
+  filtered.forEach((game) => {
     const card = document.createElement("div");
     card.classList.add("card");
     const thumb = game.thumb
       ? `<div class="thumb"><img src="${game.thumb}" alt="${game.title}"></div>`
       : `<div class="thumb"><div style='background:#222;width:100%;height:180px;display:flex;align-items:center;justify-content:center;'>Sem imagem</div></div>`;
-    card.innerHTML = `${thumb}<div class="card-body"><h3>${game.title}</h3><p>${game.desc || ""}</p></div>`;
+    card.innerHTML = `
+      ${thumb}
+      <div class="card-body">
+        <h3>${game.title}</h3>
+        <p>${game.desc || ""}</p>
+      </div>
+    `;
     card.addEventListener("click", () => (window.location.href = `game.html?id=${encodeURIComponent(game.id)}`));
     gamesContainer.appendChild(card);
   });
 }
 
+// Atualiza ao mudar filtro
 filterButtons.forEach((btn) => {
   btn.addEventListener("click", () => {
     filterButtons.forEach((b) => b.classList.remove("active"));
     btn.classList.add("active");
-    loadGames(btn.dataset.filter, searchInput.value);
+    renderGames(allGames, btn.dataset.filter, searchInput.value);
   });
 });
-searchButton.addEventListener("click", () => loadGames(getFilter(), searchInput.value));
-searchInput.addEventListener("keyup", (e) => e.key === "Enter" && loadGames(getFilter(), searchInput.value));
-function getFilter() {
-  const active = document.querySelector(".filters button.active");
-  return active ? active.dataset.filter : "all";
-}
+
+// 🔍 Busca instantânea (em tempo real)
+searchInput.addEventListener("input", () => {
+  clearTimeout(searchTimeout);
+  searchTimeout = setTimeout(() => {
+    const activeFilter = document.querySelector(".filters button.active").dataset.filter;
+    renderGames(allGames, activeFilter, searchInput.value);
+  }, 150); // leve atraso para evitar excesso de renderizações
+});
+
+// Botão de busca ainda funciona
+searchButton.addEventListener("click", () => {
+  const activeFilter = document.querySelector(".filters button.active").dataset.filter;
+  renderGames(allGames, activeFilter, searchInput.value);
+});
+
+// Inicializa
 loadGames();
